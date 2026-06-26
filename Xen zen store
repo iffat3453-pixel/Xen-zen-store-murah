@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xen ZEN Store</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dasar: '#08080d',
+                        ungu: '#451a75',
+                        unguTerang: '#5a2896'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body class="bg-dasar text-white min-h-screen">
+
+<header class="bg-black/70 p-4 flex justify-between items-center border-b border-ungu/40">
+    <h1 class="text-xl font-bold text-unguTerang">🛒 Xen ZEN Store</h1>
+    <button onclick="bukaPanelDev()" class="text-sm bg-ungu px-3 py-1 rounded hover:bg-unguTerang">Panel Dev</button>
+</header>
+
+<main id="halamanUtama" class="p-4 max-w-5xl mx-auto">
+    <h2 class="text-lg mb-4">Daftar Item Tersedia</h2>
+    <div id="daftarItem" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <p class="col-span-full text-gray-400">Belum ada item ditambahkan</p>
+    </div>
+</main>
+
+<div id="panelDev" class="hidden fixed inset-0 bg-black/90 z-50 p-4 overflow-auto">
+    <div class="bg-dasar border border-ungu rounded p-5 max-w-md mx-auto mt-10">
+        <h3 class="text-xl font-bold mb-3 text-unguTerang">🔧 Panel Developer</h3>
+        <div id="formKode">
+            <label>Masukkan Kode Akses:</label>
+            <input type="password" id="kodeAkses" class="w-full p-2 mt-1 mb-3 bg-black border border-ungu rounded" placeholder="Kode: atos_person34">
+            <button onclick="cekKode()" class="w-full bg-ungu p-2 rounded hover:bg-unguTerang">Buka Panel</button>
+        </div>
+        <div id="kontenDev" class="hidden">
+            <button onclick="tutupPanelDev()" class="text-red-400 float-right">Tutup</button>
+            <h4 class="text-lg mt-6 mb-3">Tambah / Kelola Item</h4>
+            <input type="text" id="namaItem" placeholder="Nama Item" class="w-full p-2 mb-2 bg-black border border-ungu rounded">
+            <input type="number" id="hargaItem" placeholder="Harga (Rp)" min="100" class="w-full p-2 mb-2 bg-black border border-ungu rounded">
+            <input type="number" id="stokItem" placeholder="Stok Tersedia" min="0" class="w-full p-2 mb-2 bg-black border border-ungu rounded">
+            <input type="file" id="gambarItem" accept="image/*" class="w-full p-2 mb-3 bg-black border border-ungu rounded">
+            <button onclick="simpanItem()" class="w-full bg-ungu p-2 rounded hover:bg-unguTerang">Simpan Item</button>
+        </div>
+    </div>
+</div>
+
+<div id="modalBeli" class="hidden fixed inset-0 bg-black/90 z-40 p-4 overflow-auto">
+    <div class="bg-dasar border border-ungu rounded p-5 max-w-md mx-auto mt-10">
+        <button onclick="tutupModal()" class="text-red-400 float-right">✕ Tutup</button>
+        <h3 class="text-xl font-bold mb-3 text-unguTerang">Form Pembelian</h3>
+        <p class="mb-2">Item: <span id="namaBeli" class="font-semibold"></span></p>
+        <p class="mb-3">Harga: Rp <span id="hargaBeli" class="font-semibold"></span></p>
+        <label>No. WhatsApp (wajib awalan 08):</label>
+        <input type="text" id="waPembeli" placeholder="Contoh: 08123456789" class="w-full p-2 mt-1 mb-3 bg-black border border-ungu rounded">
+        <div id="infoQRIS" class="hidden mt-4 text-center">
+            <p class="text-yellow-400 text-sm mb-3">*Scan QRIS di bawah<br>Nominal diatur pembeli, kelebihan/kurang tanggung jawab pembeli</p>
+            <div id="qrisKode" class="bg-white p-2 rounded inline-block"></div>
+            <p class="mt-2 text-sm">NMID: ID1026530492259 • Pembayaran ke DANA</p>
+        </div>
+        <button onclick="prosesBayar()" class="w-full bg-ungu p-2 rounded hover:bg-unguTerang mt-3">Tampilkan QRIS</button>
+    </div>
+</div>
+
+<script>
+const KODE_DEV = "atos_person34";
+const KODE_QRIS = "00020101021126570011ID10265304922590118ID10265304922590208A01000010303GPN510700000005204581253033605405000005802ID5911Morrys store6008Brebes61055225262270703A01081234567890123456789012345678901234567890123456789012345678901234567896304ABCD";
+let daftarItem = JSON.parse(localStorage.getItem("xenZenData")) || [];
+let itemDipilih = null;
+
+tampilkanItem();
+
+function bukaPanelDev() {
+    document.getElementById("panelDev").classList.remove("hidden");
+    document.getElementById("formKode").classList.remove("hidden");
+    document.getElementById("kontenDev").classList.add("hidden");
+    document.getElementById("kodeAkses").value = "";
+}
+function tutupPanelDev() { document.getElementById("panelDev").classList.add("hidden"); }
+function cekKode() {
+    const k = document.getElementById("kodeAkses").value.trim();
+    if (k === KODE_DEV) {
+        document.getElementById("formKode").classList.add("hidden");
+        document.getElementById("kontenDev").classList.remove("hidden");
+    } else alert("❌ Kode salah!");
+}
+function simpanKePenyimpanan() { localStorage.setItem("xenZenData", JSON.stringify(daftarItem)); }
+function tampilkanItem() {
+    const w = document.getElementById("daftarItem");
+    if (daftarItem.length === 0) { w.innerHTML = `<p class="col-span-full text-gray-400">Belum ada item</p>`; return; }
+    w.innerHTML = "";
+    daftarItem.forEach(i => {
+        const d = document.createElement("div");
+        d.className = "bg-black border border-ungu rounded p-3 text-center";
+        d.innerHTML = `<img src="${i.gambar}" alt="${i.nama}" class="w-full h-32 object-cover rounded mb-2"><h4 class="font-bold">${i.nama}</h4><p class="text-yellow-300">Rp ${i.harga.toLocaleString("id-ID")}</p><p class="text-sm text-gray-300">Stok: ${i.stok}</p>${i.stok>0?`<button onclick="bukaBeli(${i.id})" class="mt-2 w-full bg-ungu py-1 rounded hover:bg-unguTerang">Beli</button>`:`<p class="text-red-400 mt-2">Habis</p>`};
+        w.appendChild(d);
+    });
+}
+function simpanItem() {
+    const n = document.getElementById("namaItem").value.trim(), h = parseInt(document.getElementById("hargaItem").value), s = parseInt(document.getElementById("stokItem").value), g = document.getElementById("gambarItem").files[0];
+    if (!n || !h || h < 100 || isNaN(s) || s < 0) { alert("❌ Isi data benar!"); return; }
+    if (!g) { alert("❌ Masukkan gambar!"); return; }
+    const r = new FileReader();
+    r.onload = e => {
+        daftarItem.push({id: Date.now(), nama: n, harga: h, stok: s, gambar: e.target.result});
+        simpanKePenyimpanan(); tampilkanItem(); alert("✅ Item tersimpan!"); tutupPanelDev();
+    };
+    r.readAsDataURL(g);
+}
+function bukaBeli(id) {
+    itemDipilih = daftarItem.find(i => i.id === id);
+    document.getElementById("namaBeli").textContent = itemDipilih.nama;
+    document.getElementById("hargaBeli").textContent = itemDipilih.harga.toLocaleString("id-ID");
+    document.getElementById("waPembeli").value = "";
+    document.getElementById("infoQRIS").classList.add("hidden");
+    document.getElementById("modalBeli").classList.remove("hidden");
+}
+function tutupModal() { document.getElementById("modalBeli").classList.add("hidden"); }
+function prosesBayar() {
+    const wa = document.getElementById("waPembeli").value.trim();
+    if (!wa.startsWith("08") || wa.length < 10) { alert("❌ WA harus awalan 08 & ≥10 digit!"); return; }
+    document.getElementById("infoQRIS").classList.remove("hidden");
+    QRCode.toCanvas(document.getElementById("qrisKode"), KODE_QRIS, {width:220, margin:2, color:{dark:"#000", light:"#fff"}});
+}
+</script>
+
+</body>
+</html>
